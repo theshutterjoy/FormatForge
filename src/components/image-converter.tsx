@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import JSZip from 'jszip';
 import {
   Download,
   FileImage,
@@ -59,6 +60,7 @@ type ConversionResult = {
 export function ImageConverter() {
   const [files, setFiles] = React.useState<FileState[]>([]);
   const [isConverting, setIsConverting] = React.useState(false);
+  const [isZipping, setIsZipping] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -161,8 +163,17 @@ export function ImageConverter() {
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
 
+      // This is a mock conversion. In a real app, you would use a library
+      // to convert the image and get a new data URL.
+      const reader = new FileReader();
+      const convertedImageUrl = await new Promise<string>((resolve) => {
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.readAsDataURL(fileState.file);
+      });
+
+
       const result: ConversionResult = {
-        imageUrl: fileState.previewUrl,
+        imageUrl: convertedImageUrl, // Using converted image URL
         fileName: newFileName,
         rationale: aiResult.optimizationRationale,
         adjustedSettings: aiResult,
@@ -191,18 +202,43 @@ export function ImageConverter() {
     }
   };
   
-  const downloadAll = () => {
-    files.forEach(file => {
-      if (file.result) {
+  const downloadAll = async () => {
+    setIsZipping(true);
+    const zip = new JSZip();
+    try {
+      const filesToZip = files.filter(f => f.status === 'done' && f.result);
+
+      if (filesToZip.length === 0) {
+        toast({ title: "No images to download", description: "There are no successfully converted images to download.", variant: "destructive" });
+        return;
+      }
+
+      for (const fileState of filesToZip) {
+        if(fileState.result?.imageUrl) {
+            const response = await fetch(fileState.result.imageUrl);
+            const blob = await response.blob();
+            zip.file(fileState.result.fileName, blob);
+        }
+      }
+
+      zip.generateAsync({ type: 'blob' }).then(content => {
         const link = document.createElement('a');
-        link.href = file.result.imageUrl;
-        link.download = file.result.fileName;
+        link.href = URL.createObjectURL(content);
+        link.download = 'converted-images.zip';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-      }
-    });
+        URL.revokeObjectURL(link.href);
+      });
+
+    } catch (error) {
+        console.error("Failed to create zip file", error);
+        toast({ title: "Zip Creation Failed", description: "Could not create zip file.", variant: "destructive" });
+    } finally {
+        setIsZipping(false);
+    }
   };
+
 
   const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
 
@@ -347,8 +383,8 @@ export function ImageConverter() {
                   )}
                 </Button>
                 {allDone && (
-                  <Button type="button" onClick={downloadAll} className="w-full" disabled={files.filter(f => f.status === 'done').length === 0}>
-                    <Download className="mr-2 h-4 w-4" /> Download All
+                  <Button type="button" onClick={downloadAll} className="w-full" disabled={isZipping || files.filter(f => f.status === 'done').length === 0}>
+                    {isZipping ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Zipping...</> : <><Download className="mr-2 h-4 w-4" /> Download All</>}
                   </Button>
                 )}
               </form>
