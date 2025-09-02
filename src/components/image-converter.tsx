@@ -57,6 +57,23 @@ type ConversionResult = {
   adjustedSettings: OptimizeCompressionSettingsOutput;
 };
 
+// A simple retry wrapper with exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
+  let lastError: Error | undefined;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      if (i < retries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+      }
+    }
+  }
+  throw lastError;
+}
+
+
 export function ImageConverter() {
   const [files, setFiles] = React.useState<FileState[]>([]);
   const [isConverting, setIsConverting] = React.useState(false);
@@ -156,7 +173,8 @@ export function ImageConverter() {
         ...fileState.settings,
         maxFileSizeKB: Number(fileState.settings.maxFileSizeKB),
       };
-      const aiResult = await optimizeCompressionSettings(input);
+
+      const aiResult = await withRetry(() => optimizeCompressionSettings(input));
       
       clearInterval(progressInterval);
 
@@ -183,7 +201,13 @@ export function ImageConverter() {
     } catch (error) {
         console.error("Conversion failed for", fileState.file.name, error);
         setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'error', progress: 0} : f));
-        toast({ title: `Conversion Failed for ${fileState.file.name}`, description: "An unexpected error occurred.", variant: "destructive" });
+        
+        let errorMessage = "An unexpected error occurred.";
+        if (error instanceof Error && error.message.includes('503')) {
+          errorMessage = "The conversion service is temporarily overloaded. Please try again later.";
+        }
+        
+        toast({ title: `Conversion Failed for ${fileState.file.name}`, description: errorMessage, variant: "destructive" });
     }
   };
 
