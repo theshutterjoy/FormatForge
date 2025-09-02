@@ -82,8 +82,6 @@ Maximum File Size (KB): {{{maxFileSizeKB}}}
 Based on this information, provide the adjusted lossless and compression speed settings, along with a clear explanation of your reasoning. If the initial settings are likely to meet the file size constraint, keep them as they are. Otherwise, adjust them strategically, prioritizing image quality as much as possible.
 
 Output the adjusted settings and the rationale in a JSON format.
-
-{{schema description=OptimizeCompressionSettingsOutputSchema}}
 `,
 });
 
