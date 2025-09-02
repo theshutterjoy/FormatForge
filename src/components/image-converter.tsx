@@ -265,6 +265,12 @@ export function ImageConverter() {
 
 
   const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
+  
+  const conversionProgress = React.useMemo(() => {
+    if (!isConverting) return 0;
+    const completedCount = files.filter(f => f.status === 'done' || f.status === 'error').length;
+    return Math.round((completedCount / files.length) * 100);
+  }, [files, isConverting]);
 
   return (
     <Card className="w-full shadow-xl">
@@ -401,7 +407,7 @@ export function ImageConverter() {
                 
                 <Button type="submit" className="w-full" disabled={files.length === 0 || isConverting || allDone}>
                   {isConverting ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...</>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({conversionProgress}%)</>
                   ) : (
                     <><Sparkles className="mr-2 h-4 w-4" /> Convert {files.filter(f=>f.status==='pending').length || ''} Images</>
                   )}
