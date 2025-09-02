@@ -152,6 +152,7 @@ export function ImageConverter() {
 
       const input: OptimizeCompressionSettingsInput = {
         ...fileState.settings,
+        maxFileSizeKB: Number(fileState.settings.maxFileSizeKB),
       };
       const aiResult = await optimizeCompressionSettings(input);
       
