@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { optimizeCompressionSettings, type OptimizeCompressionSettingsInput, type OptimizeCompressionSettingsOutput } from '@/ai/flows/optimize-compression-settings';
+import JSZip from 'jszip';
 
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +74,6 @@ export function ImageConverter() {
       maxFileSizeKB: 1024,
     },
   });
-
   const handleReset = React.useCallback(() => {
     setFiles(prevFiles => {
       prevFiles.forEach(f => URL.revokeObjectURL(f.previewUrl));
@@ -192,7 +192,39 @@ export function ImageConverter() {
   };
   
   const downloadAll = async () => {
-    toast({ title: "Coming soon!", description: "This feature is not yet implemented." });
+    const zip = new JSZip();
+    const convertedFiles = files.filter(f => f.status === 'done' && f.result);
+    
+    if (convertedFiles.length === 0) {
+      toast({ title: "No converted files", description: "There are no successfully converted images to download.", variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Zipping files...", description: `Packaging ${convertedFiles.length} images.` });
+
+    for (const fileState of convertedFiles) {
+        if (fileState.result) {
+            const response = await fetch(fileState.result.imageUrl);
+            const blob = await response.blob();
+            zip.file(fileState.result.fileName, blob);
+        }
+    }
+
+    zip.generateAsync({ type: "blob" })
+        .then(function (content) {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = "converted_images.zip";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+            toast({ title: "Download started", description: "Your zip file is being downloaded." });
+        })
+        .catch(err => {
+            console.error("Zipping failed", err);
+            toast({ title: "Zipping Failed", description: "Could not create the zip file.", variant: "destructive" });
+        });
   };
 
 
