@@ -1,5 +1,3 @@
-'use server';
-
 /**
  * @fileOverview Adjusts lossless and compression speed settings based on desired file size constraints.
  *
@@ -11,7 +9,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const OptimizeCompressionSettingsInputSchema = z.object({
+export const OptimizeCompressionSettingsInputSchema = z.object({
   targetFormat: z
     .enum(['WEBP', 'PNG', 'JPEG', 'AVIF'])
     .describe('The desired output format for the image.'),
@@ -37,7 +35,7 @@ export type OptimizeCompressionSettingsInput = z.infer<
   typeof OptimizeCompressionSettingsInputSchema
 >;
 
-const OptimizeCompressionSettingsOutputSchema = z.object({
+export const OptimizeCompressionSettingsOutputSchema = z.object({
   adjustedLossless: z
     .boolean()
     .describe(
@@ -60,39 +58,32 @@ export type OptimizeCompressionSettingsOutput = z.infer<
   typeof OptimizeCompressionSettingsOutputSchema
 >;
 
-export async function optimizeCompressionSettings(
-  input: OptimizeCompressionSettingsInput
-): Promise<OptimizeCompressionSettingsOutput> {
-  return optimizeCompressionSettingsFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'optimizeCompressionSettingsPrompt',
-  input: {schema: OptimizeCompressionSettingsInputSchema},
-  output: {schema: OptimizeCompressionSettingsOutputSchema},
-  prompt: `You are an expert image compression optimizer. Given the user's desired image format, lossless setting, compression speed, and maximum file size, you will determine the optimal lossless and compression speed settings to meet the file size constraint while maintaining the best possible image quality.
-
-Here's the information:
-
-Desired Format: {{{targetFormat}}}
-Initial Lossless Setting: {{{lossless}}}
-Initial Compression Speed: {{{compressionSpeed}}}
-Maximum File Size (KB): {{{maxFileSizeKB}}}
-
-Based on this information, provide the adjusted lossless and compression speed settings, along with a clear explanation of your reasoning. If the initial settings are likely to meet the file size constraint, keep them as they are. Otherwise, adjust them strategically, prioritizing image quality as much as possible.
-
-Output the adjusted settings and the rationale in a JSON format.
-`,
-});
-
-const optimizeCompressionSettingsFlow = ai.defineFlow(
+export const optimizeCompressionSettingsFlow = ai.defineFlow(
   {
     name: 'optimizeCompressionSettingsFlow',
     inputSchema: OptimizeCompressionSettingsInputSchema,
     outputSchema: OptimizeCompressionSettingsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const prompt = `You are an expert image compression optimizer. Given the user's desired image format, lossless setting, compression speed, and maximum file size, you will determine the optimal lossless and compression speed settings to meet the file size constraint while maintaining the best possible image quality.
+
+Here's the information:
+
+Desired Format: ${input.targetFormat}
+Initial Lossless Setting: ${input.lossless}
+Initial Compression Speed: ${input.compressionSpeed}
+Maximum File Size (KB): ${input.maxFileSizeKB}
+
+Based on this information, provide the adjusted lossless and compression speed settings, along with a clear explanation of your reasoning. If the initial settings are likely to meet the file size constraint, keep them as they are. Otherwise, adjust them strategically, prioritizing image quality as much as possible.
+
+Output the adjusted settings and the rationale in a JSON format.
+`;
+    const {output} = await ai.generate({
+      prompt: prompt,
+      output: {
+        schema: OptimizeCompressionSettingsOutputSchema,
+      },
+    });
     return output!;
   }
 );

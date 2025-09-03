@@ -15,7 +15,7 @@ import {
   Settings,
   X,
 } from 'lucide-react';
-import { optimizeCompressionSettings, type OptimizeCompressionSettingsInput, type OptimizeCompressionSettingsOutput } from '@/ai/flows/optimize-compression-settings';
+import { type OptimizeCompressionSettingsInput, type OptimizeCompressionSettingsOutput } from '@/ai/flows/optimize-compression-settings';
 import JSZip from 'jszip';
 
 import { cn } from '@/lib/utils';
@@ -157,7 +157,18 @@ export function ImageConverter() {
         maxFileSizeKB: Number(fileState.settings.maxFileSizeKB),
       };
 
-      const aiResult = await optimizeCompressionSettings(input);
+      const response = await fetch('/api/optimize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API Error: ${response.statusText} - ${errorText}`);
+      }
+      
+      const aiResult = await response.json();
       
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
@@ -380,7 +391,7 @@ export function ImageConverter() {
                   )} />
                 </div>
                 
-                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
+                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({Math.round(overallProgress)}%)</>
                   ) : (
@@ -400,5 +411,3 @@ export function ImageConverter() {
     </Card>
   );
 }
-
-    
