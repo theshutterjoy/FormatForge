@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import JSZip from 'jszip';
 import {
   Download,
   FileImage,
@@ -35,7 +34,7 @@ const formSchema = z.object({
   lossless: z.boolean().default(false),
   compressionSpeed: z.number().min(1).max(10).default(5),
   stripMetadata: z.boolean().default(true),
-  maxFileSizeKB: z.coerce.number({invalid_type_error: "Please enter a number"}).min(10, "Must be at least 10KB").max(10000, "Must be 10000KB or less").default(1024),
+  maxFileSizeKB: z.coerce.number().min(10).max(10000).default(1024),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,27 +56,9 @@ type ConversionResult = {
   adjustedSettings: OptimizeCompressionSettingsOutput;
 };
 
-// A simple retry wrapper with exponential backoff
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
-  let lastError: Error | undefined;
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error as Error;
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
-      }
-    }
-  }
-  throw lastError;
-}
-
-
 export function ImageConverter() {
   const [files, setFiles] = React.useState<FileState[]>([]);
   const [isConverting, setIsConverting] = React.useState(false);
-  const [isZipping, setIsZipping] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -93,7 +74,7 @@ export function ImageConverter() {
     },
   });
 
-  const resetState = React.useCallback(() => {
+  const handleReset = React.useCallback(() => {
     setFiles(prevFiles => {
       prevFiles.forEach(f => URL.revokeObjectURL(f.previewUrl));
       return [];
@@ -110,8 +91,8 @@ export function ImageConverter() {
       const newFiles: FileState[] = Array.from(selectedFiles).map((file, i) => {
         if (!file.type.startsWith('image/')) {
           toast({
-            title: "Invalid File Type",
-            description: `The selected file "${file.name}" is not a valid image.`,
+            title: "Error: Invalid File Type",
+            description: `File "${file.name}" is not a valid image.`,
             variant: "destructive",
           });
           return null;
@@ -152,16 +133,11 @@ export function ImageConverter() {
     }
   };
   
-  const applySettingsToAll = () => {
-    const currentSettings = form.getValues();
-    setFiles(prev => prev.map(f => ({...f, settings: currentSettings})));
-    toast({ title: "Settings Applied", description: "The current settings have been applied to all uploaded images." });
-  };
-  
   const convertFile = async (fileState: FileState) => {
     try {
       setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: 0} : f));
 
+      // Simulate progress
       let progressInterval = setInterval(() => {
         setFiles(prev => prev.map(f => {
           if (f.id === fileState.id && f.progress < 90) {
@@ -176,15 +152,13 @@ export function ImageConverter() {
         maxFileSizeKB: Number(fileState.settings.maxFileSizeKB),
       };
 
-      const aiResult = await withRetry(() => optimizeCompressionSettings(input));
+      const aiResult = await optimizeCompressionSettings(input);
       
       clearInterval(progressInterval);
 
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
 
-      // This is a mock conversion. In a real app, you would use a library
-      // to convert the image and get a new data URL.
       const reader = new FileReader();
       const convertedImageUrl = await new Promise<string>((resolve) => {
         reader.onload = (e) => resolve(e.target?.result as string);
@@ -193,7 +167,7 @@ export function ImageConverter() {
 
 
       const result: ConversionResult = {
-        imageUrl: convertedImageUrl, // Using converted image URL
+        imageUrl: convertedImageUrl,
         fileName: newFileName,
         rationale: aiResult.optimizationRationale,
         adjustedSettings: aiResult,
@@ -203,13 +177,7 @@ export function ImageConverter() {
     } catch (error) {
         console.error("Conversion failed for", fileState.file.name, error);
         setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'error', progress: 0} : f));
-        
-        let errorMessage = "An unexpected error occurred.";
-        if (error instanceof Error && error.message.includes('503')) {
-          errorMessage = "The conversion service is temporarily overloaded. Please try again later.";
-        }
-        
-        toast({ title: `Conversion Failed for ${fileState.file.name}`, description: errorMessage, variant: "destructive" });
+        toast({ title: `Conversion Failed for ${fileState.file.name}`, description: "An unexpected error occurred.", variant: "destructive" });
     }
   };
 
@@ -221,61 +189,17 @@ export function ImageConverter() {
     setIsConverting(true);
     await Promise.all(files.filter(f => f.status === 'pending').map(convertFile));
     setIsConverting(false);
-
-    const allSucceeded = files.every(f => f.status === 'done');
-    if (allSucceeded) {
-      toast({ title: "All Conversions Successful!", description: "Your images have been converted." });
-    }
   };
   
   const downloadAll = async () => {
-    setIsZipping(true);
-    const zip = new JSZip();
-    try {
-      const filesToZip = files.filter(f => f.status === 'done' && f.result);
-
-      if (filesToZip.length === 0) {
-        toast({ title: "No images to download", description: "There are no successfully converted images to download.", variant: "destructive" });
-        return;
-      }
-
-      for (const fileState of filesToZip) {
-        if(fileState.result?.imageUrl) {
-            const response = await fetch(fileState.result.imageUrl);
-            const blob = await response.blob();
-            zip.file(fileState.result.fileName, blob);
-        }
-      }
-
-      zip.generateAsync({ type: 'blob' }).then(content => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(content);
-        link.download = 'converted-images.zip';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      });
-
-    } catch (error) {
-        console.error("Failed to create zip file", error);
-        toast({ title: "Zip Creation Failed", description: "Could not create zip file.", variant: "destructive" });
-    } finally {
-        setIsZipping(false);
-    }
+    toast({ title: "Coming soon!", description: "This feature is not yet implemented." });
   };
 
 
   const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
-  
-  const conversionProgress = React.useMemo(() => {
-    if (!isConverting || files.length === 0) return 0;
-    const completedCount = files.filter(f => f.status === 'done' || f.status === 'error').length;
-    return Math.round((completedCount / files.length) * 100);
-  }, [files, isConverting]);
 
   return (
-    <Card className="w-full shadow-xl">
+    <Card className="w-full shadow-none border-0 rounded-none bg-transparent">
       <CardContent className="p-4 md:p-8">
         <div className="grid md:grid-cols-2 gap-8 md:gap-12">
           
@@ -287,14 +211,14 @@ export function ImageConverter() {
                 onDragLeave={onDragLeave}
                 onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "relative flex flex-col items-center justify-center w-full h-48 rounded-lg border-2 border-dashed transition-colors duration-300 cursor-pointer",
-                  isDragging ? "border-primary bg-accent/20" : "border-border hover:border-primary/80"
+                  "relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed transition-colors duration-300 cursor-pointer",
+                  isDragging ? "border-primary bg-primary/10" : "border-foreground hover:border-primary"
                 )}
               >
                 <div className="text-center p-8">
-                  <UploadCloud className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <p className="mt-4 font-semibold text-foreground">Click to upload or drag & drop</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Supports PNG, JPG, GIF, WEBP</p>
+                  <UploadCloud className="mx-auto h-12 w-12 text-foreground" />
+                  <p className="mt-4 font-bold text-foreground uppercase">Click to upload or drag & drop</p>
+                  <p className="mt-1 text-sm text-muted-foreground">// Supports PNG, JPG, GIF, WEBP //</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -307,28 +231,28 @@ export function ImageConverter() {
               </div>
 
             {files.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Uploaded Files</h3>
+              <div className="space-y-4 border-2 border-foreground p-4">
+                <h3 className="text-lg font-bold uppercase">Uploaded Files</h3>
                 <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
                   {files.map(fileState => (
-                    <div key={fileState.id} className="flex items-center gap-4 p-2 border rounded-lg">
-                      <Image src={fileState.previewUrl} alt="preview" width={64} height={64} className="rounded-md object-cover w-16 h-16" />
+                    <div key={fileState.id} className="flex items-center gap-4 p-2 border-2 border-foreground">
+                      <Image src={fileState.previewUrl} alt="preview" width={64} height={64} className="object-cover w-16 h-16 border-2 border-foreground" />
                       <div className="flex-1">
                         <p className="text-sm font-medium truncate">{fileState.file.name}</p>
-                        {fileState.status === 'converting' && <Progress value={fileState.progress} className="h-2 mt-1" />}
+                        {fileState.status === 'converting' && <Progress value={fileState.progress} className="h-2 mt-1 bg-foreground/20" />}
                         {fileState.status === 'done' && fileState.result && (
                            <a href={fileState.result.imageUrl} download={fileState.result.fileName} className="mt-1 inline-block">
-                             <Button size="sm" variant="outline"><Download className="mr-2" /> Download</Button>
+                             <Button size="sm" variant="outline" className="border-2 border-foreground hover:bg-primary hover:text-primary-foreground"> Download</Button>
                            </a>
                         )}
-                         {fileState.status === 'error' && <p className="text-xs text-destructive">Conversion failed</p>}
+                         {fileState.status === 'error' && <p className="text-xs text-destructive">!! Conversion failed !!</p>}
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => removeFile(fileState.id)}><X className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => removeFile(fileState.id)} className="hover:bg-destructive"><X className="h-4 w-4" /></Button>
                     </div>
                   ))}
                 </div>
-                 <Button variant="outline" onClick={resetState} className="w-full">
-                  <RotateCcw className="mr-2" /> Clear All
+                 <Button variant="outline" onClick={handleReset} className="w-full border-2 border-foreground hover:bg-destructive">
+                  Clear All
                  </Button>
               </div>
             )}
@@ -337,14 +261,14 @@ export function ImageConverter() {
           <div className="flex flex-col justify-center">
             <Form {...form}>
               <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
-                <h2 className="text-2xl font-semibold text-foreground border-b pb-2">Conversion Settings</h2>
+                <h2 className="text-2xl font-bold text-foreground uppercase border-b-2 border-primary pb-2">Settings</h2>
                 
                 <FormField control={form.control} name="targetFormat" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Target Format</FormLabel>
+                    <FormLabel className="font-bold uppercase">Target Format</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select a format" /></SelectTrigger></FormControl>
-                      <SelectContent>
+                      <FormControl><SelectTrigger className="border-2 border-foreground font-bold"><SelectValue placeholder="// Select a format //" /></SelectTrigger></FormControl>
+                      <SelectContent className="border-2 border-foreground bg-background font-bold">
                         <SelectItem value="WEBP">WEBP</SelectItem>
                         <SelectItem value="PNG">PNG</SelectItem>
                         <SelectItem value="JPEG">JPEG</SelectItem>
@@ -356,9 +280,9 @@ export function ImageConverter() {
 
                 <FormField control={form.control} name="maxFileSizeKB" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Max File Size (KB)</FormLabel>
-                    <FormControl><Input type="number" placeholder="e.g., 1024" {...field} /></FormControl>
-                    <FormDescription>AI will optimize settings to stay below this size.</FormDescription>
+                    <FormLabel className="font-bold uppercase">Max File Size (KB)</FormLabel>
+                    <FormControl><Input type="number" placeholder="e.g., 1024" {...field} className="border-2 border-foreground font-bold" /></FormControl>
+                    <FormDescription>// AI will optimize for this size //</FormDescription>
                      <FormMessage />
                   </FormItem>
                 )} />
@@ -366,17 +290,18 @@ export function ImageConverter() {
                 <FormField control={form.control} name="compressionSpeed" render={({ field }) => (
                    <FormItem>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Compression Speed</FormLabel>
-                        <span className="text-sm font-medium text-primary">{field.value}</span>
+                        <FormLabel className="font-bold uppercase">Compression Speed</FormLabel>
+                        <span className="text-sm font-bold text-primary">{field.value}</span>
                       </div>
                       <FormControl>
                           <Slider
                               min={1} max={10} step={1}
                               value={[field.value]}
                               onValueChange={(value) => field.onChange(value[0])}
+                              className="[&>span>span]:border-primary [&>span>span]:bg-background [&>span>span]:border-2"
                           />
                       </FormControl>
-                       <div className="flex justify-between text-xs text-muted-foreground">
+                       <div className="flex justify-between text-xs text-muted-foreground font-bold">
                           <span>Slower</span>
                           <span>Faster</span>
                       </div>
@@ -385,38 +310,34 @@ export function ImageConverter() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <FormField control={form.control} name="lossless" render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
+                      <FormItem className="flex flex-row items-center justify-between border-2 border-foreground p-3">
                           <div className="space-y-0.5">
-                              <FormLabel>Lossless</FormLabel>
+                              <FormLabel className="font-bold uppercase">Lossless</FormLabel>
                           </div>
                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                       </FormItem>
                   )} />
 
                   <FormField control={form.control} name="stripMetadata" render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-background/50">
+                      <FormItem className="flex flex-row items-center justify-between border-2 border-foreground p-3">
                           <div className="space-y-0.5">
-                              <FormLabel>Strip Metadata</FormLabel>
+                              <FormLabel className="font-bold uppercase">Strip Metadata</FormLabel>
                           </div>
                           <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                       </FormItem>
                   )} />
                 </div>
                 
-                 <Button type="button" variant="outline" className="w-full" onClick={applySettingsToAll} disabled={files.length === 0}>
-                   Apply to All
-                </Button>
-                
-                <Button type="submit" className="w-full" disabled={files.length === 0 || isConverting || allDone}>
+                <Button type="submit" className="w-full font-bold uppercase border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({conversionProgress}%)</>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...</>
                   ) : (
-                    <><Sparkles className="mr-2 h-4 w-4" /> Convert {files.filter(f=>f.status==='pending').length || ''} Images</>
+                    <>Convert {files.length > 0 ? files.length : ''} Images</>
                   )}
                 </Button>
                 {allDone && (
-                  <Button type="button" onClick={downloadAll} className="w-full" disabled={isZipping || files.filter(f => f.status === 'done').length === 0}>
-                    {isZipping ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Zipping...</> : <><Download className="mr-2 h-4 w-4" /> Download All</>}
+                  <Button type="button" onClick={downloadAll} className="w-full font-bold uppercase border-2 border-foreground hover:bg-primary">
+                    <Download className="mr-2 h-4 w-4" /> Download All
                   </Button>
                 )}
               </form>
