@@ -61,6 +61,7 @@ export function ImageConverter() {
   const [files, setFiles] = React.useState<FileState[]>([]);
   const [isConverting, setIsConverting] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
+  const [overallProgress, setOverallProgress] = React.useState(0);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -74,12 +75,14 @@ export function ImageConverter() {
       maxFileSizeKB: 1024,
     },
   });
+
   const handleReset = React.useCallback(() => {
     setFiles(prevFiles => {
       prevFiles.forEach(f => URL.revokeObjectURL(f.previewUrl));
       return [];
     });
     setIsConverting(false);
+    setOverallProgress(0);
     form.reset();
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -122,6 +125,18 @@ export function ImageConverter() {
     });
   };
 
+  const applySettingsToAll = () => {
+    const currentSettings = form.getValues();
+    setFiles(prev => prev.map(f => ({
+      ...f,
+      settings: currentSettings,
+    })));
+    toast({
+      title: 'Settings Applied',
+      description: 'The current settings have been applied to all uploaded images.',
+    });
+  };
+
   const onDragEnter = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(true); };
   const onDragLeave = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); setIsDragging(false); };
   const onDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); };
@@ -133,19 +148,9 @@ export function ImageConverter() {
     }
   };
   
-  const convertFile = async (fileState: FileState) => {
+  const convertFile = async (fileState: FileState, retries = 3) => {
     try {
       setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: 0} : f));
-
-      // Simulate progress
-      let progressInterval = setInterval(() => {
-        setFiles(prev => prev.map(f => {
-          if (f.id === fileState.id && f.progress < 90) {
-            return {...f, progress: f.progress + 10};
-          }
-          return f;
-        }));
-      }, 100);
 
       const input: OptimizeCompressionSettingsInput = {
         ...fileState.settings,
@@ -154,8 +159,6 @@ export function ImageConverter() {
 
       const aiResult = await optimizeCompressionSettings(input);
       
-      clearInterval(progressInterval);
-
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
 
@@ -165,7 +168,6 @@ export function ImageConverter() {
         reader.readAsDataURL(fileState.file);
       });
 
-
       const result: ConversionResult = {
         imageUrl: convertedImageUrl,
         fileName: newFileName,
@@ -174,10 +176,16 @@ export function ImageConverter() {
       };
 
       setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'done', progress: 100, result } : f));
-    } catch (error) {
-        console.error("Conversion failed for", fileState.file.name, error);
-        setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'error', progress: 0} : f));
-        toast({ title: `Conversion Failed for ${fileState.file.name}`, description: "An unexpected error occurred.", variant: "destructive" });
+    } catch (error: any) {
+        if (retries > 0 && error.message.includes('503 Service Unavailable')) {
+          console.warn(`Retrying conversion for ${fileState.file.name}... (${retries} retries left)`);
+          await new Promise(res => setTimeout(res, (4 - retries) * 1000));
+          await convertFile(fileState, retries - 1);
+        } else {
+          console.error("Conversion failed for", fileState.file.name, error);
+          setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'error', progress: 0} : f));
+          toast({ title: `Conversion Failed for ${fileState.file.name}`, description: "An unexpected error occurred.", variant: "destructive" });
+        }
     }
   };
 
@@ -187,7 +195,14 @@ export function ImageConverter() {
       return;
     }
     setIsConverting(true);
-    await Promise.all(files.filter(f => f.status === 'pending').map(convertFile));
+    setOverallProgress(0);
+
+    const filesToConvert = files.filter(f => f.status === 'pending');
+    for (let i = 0; i < filesToConvert.length; i++) {
+        await convertFile(filesToConvert[i]);
+        setOverallProgress(((i + 1) / filesToConvert.length) * 100);
+    }
+
     setIsConverting(false);
   };
   
@@ -264,7 +279,12 @@ export function ImageConverter() {
 
             {files.length > 0 && (
               <div className="space-y-4 border-2 border-foreground p-4">
-                <h3 className="text-lg font-bold uppercase">Uploaded Files</h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-bold uppercase">Uploaded Files</h3>
+                  <Button variant="outline" size="sm" onClick={applySettingsToAll} className="text-xs">
+                    Apply to All
+                  </Button>
+                </div>
                 <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
                   {files.map(fileState => (
                     <div key={fileState.id} className="flex items-center gap-4 p-2 border-2 border-foreground">
@@ -274,7 +294,7 @@ export function ImageConverter() {
                         {fileState.status === 'converting' && <Progress value={fileState.progress} className="h-2 mt-1 bg-foreground/20" />}
                         {fileState.status === 'done' && fileState.result && (
                            <a href={fileState.result.imageUrl} download={fileState.result.fileName} className="mt-1 inline-block">
-                             <Button size="sm" variant="outline" className="border-2 border-foreground hover:bg-primary hover:text-primary-foreground"> Download</Button>
+                             <Button size="sm" variant="outline">Download</Button>
                            </a>
                         )}
                          {fileState.status === 'error' && <p className="text-xs text-destructive">!! Conversion failed !!</p>}
@@ -283,7 +303,7 @@ export function ImageConverter() {
                     </div>
                   ))}
                 </div>
-                 <Button variant="outline" onClick={handleReset} className="w-full border-2 border-foreground hover:bg-destructive">
+                 <Button variant="outline" onClick={handleReset} className="w-full hover:bg-destructive">
                   Clear All
                  </Button>
               </div>
@@ -360,15 +380,15 @@ export function ImageConverter() {
                   )} />
                 </div>
                 
-                <Button type="submit" className="w-full font-bold uppercase border-2 border-primary bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
+                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting...</>
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({Math.round(overallProgress)}%)</>
                   ) : (
                     <>Convert {files.length > 0 ? files.length : ''} Images</>
                   )}
                 </Button>
                 {allDone && (
-                  <Button type="button" onClick={downloadAll} className="w-full font-bold uppercase border-2 border-foreground hover:bg-primary">
+                  <Button type="button" onClick={downloadAll} className="w-full font-bold uppercase border-2 border-foreground hover:bg-primary hover:text-primary-foreground">
                     <Download className="mr-2 h-4 w-4" /> Download All
                   </Button>
                 )}

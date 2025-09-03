@@ -2,9 +2,9 @@ import { ImageConverter } from '@/components/image-converter';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 md:p-12 bg-black">
-      <div className="w-full max-w-6xl mx-auto border-2 border-primary p-1">
-        <header className="text-center mb-8 p-4 border-b-2 border-primary">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 md:p-12">
+      <div className="w-full max-w-6xl mx-auto border-2 border-foreground p-1">
+        <header className="text-center mb-8 p-4 border-b-2 border-foreground">
           <h1 className="text-4xl md:text-5xl font-bold text-primary font-headline tracking-tighter uppercase">
             Format Forge
           </h1>
