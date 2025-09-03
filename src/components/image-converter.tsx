@@ -380,7 +380,7 @@ export function ImageConverter() {
                   )} />
                 </div>
                 
-                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
+                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({Math.round(overallProgress)}%)</>
                   ) : (
@@ -400,3 +400,5 @@ export function ImageConverter() {
     </Card>
   );
 }
+
+    
