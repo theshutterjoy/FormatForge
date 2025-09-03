@@ -94,14 +94,16 @@ export function ImageConverter() {
   });
 
   const resetState = React.useCallback(() => {
-    files.forEach(f => URL.revokeObjectURL(f.previewUrl));
-    setFiles([]);
+    setFiles(prevFiles => {
+      prevFiles.forEach(f => URL.revokeObjectURL(f.previewUrl));
+      return [];
+    });
     setIsConverting(false);
     form.reset();
-    if(fileInputRef.current) {
+    if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [files, form]);
+  }, [form]);
   
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (selectedFiles && selectedFiles.length > 0) {
@@ -267,7 +269,7 @@ export function ImageConverter() {
   const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
   
   const conversionProgress = React.useMemo(() => {
-    if (!isConverting) return 0;
+    if (!isConverting || files.length === 0) return 0;
     const completedCount = files.filter(f => f.status === 'done' || f.status === 'error').length;
     return Math.round((completedCount / files.length) * 100);
   }, [files, isConverting]);
