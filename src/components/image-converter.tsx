@@ -57,6 +57,54 @@ type ConversionResult = {
   adjustedSettings: OptimizeCompressionSettingsOutput;
 };
 
+// Helper function to convert a file to a data URL
+const fileToDataUrl = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+};
+
+// Helper function to create an image from a data URL
+const createImage = (dataUrl: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = document.createElement('img');
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+};
+
+// Helper function to perform the conversion on a canvas
+const performConversion = async (
+  image: HTMLImageElement,
+  settings: FormValues,
+  adjustedSettings: OptimizeCompressionSettingsOutput
+): Promise<string> => {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d');
+
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+
+  ctx.drawImage(image, 0, 0);
+
+  // The 'quality' parameter for toDataURL is a number between 0 and 1.
+  // We can map the compression speed (1-10) to a quality value.
+  // Slower speed = higher quality.
+  // We'll use the AI's adjusted speed.
+  const quality = (11 - adjustedSettings.adjustedCompressionSpeed) / 10;
+  
+  const mimeType = `image/${settings.targetFormat.toLowerCase()}`;
+
+  return canvas.toDataURL(mimeType, quality);
+};
+
 export function ImageConverter() {
   const [files, setFiles] = React.useState<FileState[]>([]);
   const [isConverting, setIsConverting] = React.useState(false);
@@ -173,11 +221,11 @@ export function ImageConverter() {
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
 
-      const reader = new FileReader();
-      const convertedImageUrl = await new Promise<string>((resolve) => {
-        reader.onload = (e) => resolve(e.target?.result as string);
-        reader.readAsDataURL(fileState.file);
-      });
+      // Perform the actual conversion
+      const dataUrl = await fileToDataUrl(fileState.file);
+      const image = await createImage(dataUrl);
+      const convertedImageUrl = await performConversion(image, fileState.settings, aiResult);
+
 
       const result: ConversionResult = {
         imageUrl: convertedImageUrl,
@@ -276,7 +324,7 @@ export function ImageConverter() {
                 <div className="text-center p-8">
                   <UploadCloud className="mx-auto h-12 w-12 text-foreground" />
                   <p className="mt-4 font-bold text-foreground uppercase">Click to upload or drag & drop</p>
-                  <p className="mt-1 text-sm text-muted-foreground">// Supports PNG, JPG, GIF, WEBP //</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Supports PNG, JPG, GIF, WEBP</p>
                 </div>
                 <input
                   ref={fileInputRef}
@@ -308,7 +356,7 @@ export function ImageConverter() {
                              <Button size="sm" variant="outline">Download</Button>
                            </a>
                         )}
-                         {fileState.status === 'error' && <p className="text-xs text-destructive">!! Conversion failed !!</p>}
+                         {fileState.status === 'error' && <p className="text-xs text-destructive">Conversion failed</p>}
                       </div>
                       <Button variant="ghost" size="icon" onClick={() => removeFile(fileState.id)} className="hover:bg-destructive"><X className="h-4 w-4" /></Button>
                     </div>
@@ -330,7 +378,7 @@ export function ImageConverter() {
                   <FormItem>
                     <FormLabel className="font-bold uppercase">Target Format</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl><SelectTrigger className="border-2 border-foreground font-bold"><SelectValue placeholder="// Select a format //" /></SelectTrigger></FormControl>
+                      <FormControl><SelectTrigger className="border-2 border-foreground font-bold"><SelectValue placeholder="Select a format" /></SelectTrigger></FormControl>
                       <SelectContent className="border-2 border-foreground bg-background font-bold">
                         <SelectItem value="WEBP">WEBP</SelectItem>
                         <SelectItem value="PNG">PNG</SelectItem>
@@ -345,7 +393,7 @@ export function ImageConverter() {
                   <FormItem>
                     <FormLabel className="font-bold uppercase">Max File Size (KB)</FormLabel>
                     <FormControl><Input type="number" placeholder="e.g., 1024" {...field} className="border-2 border-foreground font-bold" /></FormControl>
-                    <FormDescription>// AI will optimize for this size //</FormDescription>
+                    <FormDescription>AI will optimize for this size</FormDescription>
                      <FormMessage />
                   </FormItem>
                 )} />
@@ -391,15 +439,15 @@ export function ImageConverter() {
                   )} />
                 </div>
                 
-                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-primary-foreground hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
+                <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-background hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({Math.round(overallProgress)}%)</>
                   ) : (
-                    <>Convert {files.length > 0 ? files.length : ''} Images</>
+                    <>Convert {files.length > 0 ? files.length : ''} {files.length === 1 ? 'Image' : 'Images'}</>
                   )}
                 </Button>
                 {allDone && (
-                  <Button type="button" onClick={downloadAll} className="w-full font-bold uppercase border-2 border-foreground hover:bg-primary hover:text-primary-foreground">
+                  <Button type="button" onClick={downloadAll} className="w-full font-bold uppercase border-2 border-foreground hover:bg-primary hover:text-background">
                     <Download className="mr-2 h-4 w-4" /> Download All
                   </Button>
                 )}
@@ -411,3 +459,5 @@ export function ImageConverter() {
     </Card>
   );
 }
+
+    
