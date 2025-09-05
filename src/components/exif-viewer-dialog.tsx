@@ -88,7 +88,7 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
           Metadata
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
+      <DialogContent className="max-w-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))] w-[calc(100%-2rem)] rounded-lg">
         <DialogHeader>
           <DialogTitle className="font-bold uppercase text-2xl text-primary">EXIF/Metadata Viewer</DialogTitle>
         </DialogHeader>
@@ -120,8 +120,8 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
                     <TableBody>
                         {Object.entries(metadata).map(([key, tag]) => (
                             <TableRow key={key}>
-                                <TableCell className="font-medium">{key}</TableCell>
-                                <TableCell>{tag.description}</TableCell>
+                                <TableCell className="font-medium break-all">{key}</TableCell>
+                                <TableCell className="break-all">{tag.description}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
