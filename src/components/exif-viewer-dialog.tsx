@@ -98,8 +98,12 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
           </p>
           
           <Input type="file" accept="image/jpeg, image/tiff, image/png, image/webp" onChange={handleFileChange} className="hidden" ref={fileInputRef} />
-          <Button onClick={handleButtonClick} variant="outline" className="w-full">
-            {fileName ? `Loaded: ${fileName}` : 'Select an Image'}
+          <Button onClick={handleButtonClick} variant="outline" className="w-full overflow-hidden">
+            {fileName ? (
+              <span className="truncate">Loaded: {fileName}</span>
+            ) : (
+              'Select an Image'
+            )}
           </Button>
 
           {error && (
