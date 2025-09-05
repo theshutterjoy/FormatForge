@@ -37,7 +37,7 @@ export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
           About
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
+      <DialogContent className="max-w-md border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))] w-[calc(100%-2rem)] rounded-lg">
         <DialogHeader>
           <DialogTitle className="font-bold uppercase text-2xl text-primary">About Format Forge</DialogTitle>
         </DialogHeader>
@@ -73,15 +73,15 @@ export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
               <span className="sr-only">Twitter / X</span>
             </a>
             <a href="https://www.behance.net/theshutterjoy" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
                 width="24"
                 height="24"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 className="h-6 w-6"
               >
-                <path d="M7.938 10.359h5.125c1.125 0 1.688.563 1.688 1.594 0 1.031-.563 1.594-1.688 1.594h-5.125v-3.188zm10.375-1.5c-.281-.094-.656-.188-1.031-.188-2.156 0-3.656 1.406-3.656 4.219 0 2.813 1.5 4.125 3.563 4.125 1.219 0 2.156-.469 2.719-1.219h.094v.938h2.313v-7.188c0-1.031-.75-1.406-1.875-1.406-.656 0-1.219.188-1.563.313l-.563 1.813zm-8.219 8.219h5.813c1.688 0 2.906-1.031 2.906-2.813 0-1.781-1.219-2.813-2.906-2.813h-5.813v5.626zM15.75 3h-7.5c-1.219 0-2.25.938-2.25 2.25v13.5c0 1.313 1.031 2.25 2.25 2.25h7.5c1.313 0 2.25-1.031 2.25-2.25v-13.5c0-1.313-.938-2.25-2.25-2.25zm.75 7.125h-2.25v-1.875h2.25v1.875z"/>
+                  <path d="M22.5 7.625H16.875V6H22.5V7.625ZM16.334 14.834C17.313 14.834 18.25 14.438 18.25 13.125C18.25 11.875 17.313 11.438 16.334 11.438H13.25V14.834H16.334ZM22.25 11.125C21.407 10.344 20.125 10 18.313 10C15.875 10 14.25 11.313 14.25 13.5C14.25 15.688 15.844 17 18.125 17C19.469 17 20.75 16.406 21.563 15.5H21.625V17.375H24V10.5C24 10.188 23.313 10.438 22.25 11.125ZM11.125 12.125H5.875V14.5H10.188C10.782 14.5 11.313 14.125 11.313 13.344C11.313 12.563 10.782 12.125 10.188 12.125H11.125ZM11.875 17H4V6H12C14.188 6 15.5 7.156 15.5 9.125C15.5 11.094 14.188 12.25 12 12.25H11.125V12.125H5.875V10.25H11.313C12.438 10.25 13.25 9.75 13.25 8.969C13.25 8.188 12.469 7.75 11.313 7.75H5.875V8.5H4V6H12C14.188 6 15.5 7.156 15.5 9.125C15.5 11.094 14.188 12.25 12 12.25H5.875V15.25H11.875C14.031 15.25 15.375 14.125 15.375 12.188C15.375 10.25 14.031 9.125 11.875 9.125H4V17H11.875Z"/>
               </svg>
               <span className="sr-only">Behance</span>
             </a>
