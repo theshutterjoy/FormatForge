@@ -73,16 +73,7 @@ export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
               <span className="sr-only">Twitter / X</span>
             </a>
             <a href="https://www.behance.net/theshutterjoy" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  className="h-6 w-6"
-                >
-                  <path d="M19.9 6.9c-0.1-0.5-0.6-0.9-1.2-0.9H15v1.8h3.6c0 0-0.1 0.6-0.6 0.6s-3 0-3 0v3.6c0 0 1.9 0 1.9-1.8s-1.9-1.8-1.9-1.8V7H9.2v1.8c0 0-1.2 0-1.2-1.2s1.2-1.2 1.2-1.2V6.9H5.2C4.6 6.9 4 7.4 4 8v8c0 0.6 0.6 1.1 1.2 1.1h3.3c0 0 0-1.8-1.8-1.8s-1.2-1.2-1.2-1.2s0-1.8 3-1.8s3.6 1.8 3.6 1.8s0.6 1.2 3.6 1.2s3-1.8 3-1.8s1.2-2.4 1.2-3.6C21.1 9.3 19.9 6.9 19.9 6.9z M17.4 15.3c-1.2 0.6-3 0-3 0s-1.2-0.6-1.2-1.8c0-1.2 1.2-1.8 1.2-1.8s1.2-0.6 2.4 0c1.2 0.6 1.2 1.8 1.2 1.8S18.6 14.7 17.4 15.3z M15 11.1h4.2v-1H15V11.1z" />
-                </svg>
+              <span className="font-bold text-lg h-6 w-6 flex items-center justify-center">Be</span>
               <span className="sr-only">Behance</span>
             </a>
           </div>
