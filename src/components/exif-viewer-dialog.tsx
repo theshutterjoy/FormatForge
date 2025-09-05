@@ -88,7 +88,7 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
           Metadata
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
+      <DialogContent className="max-w-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
         <DialogHeader>
           <DialogTitle className="font-bold uppercase text-2xl text-primary">EXIF/Metadata Viewer</DialogTitle>
         </DialogHeader>

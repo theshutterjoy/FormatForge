@@ -37,7 +37,7 @@ export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
           About
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
+      <DialogContent className="max-w-md border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
         <DialogHeader>
           <DialogTitle className="font-bold uppercase text-2xl text-primary">About Format Forge</DialogTitle>
         </DialogHeader>
