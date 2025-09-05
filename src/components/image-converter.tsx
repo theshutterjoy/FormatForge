@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from 'react';
@@ -304,6 +305,16 @@ export function ImageConverter() {
 
   const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
 
+  const filesToConvertCount = files.filter(f => f.status === 'pending').length;
+
+  const handlePrimaryButtonClick = () => {
+    if (allDone) {
+      fileInputRef.current?.click();
+    } else {
+      onSubmit();
+    }
+  };
+
   return (
     <Card className="w-full shadow-none border-0 rounded-none bg-transparent">
       <CardContent className="p-4 md:p-8">
@@ -371,7 +382,7 @@ export function ImageConverter() {
           
           <div className="flex flex-col justify-center">
             <Form {...form}>
-              <form onSubmit={(e) => { e.preventDefault(); onSubmit(); }} className="space-y-6">
+              <form onSubmit={(e) => { e.preventDefault(); handlePrimaryButtonClick(); }} className="space-y-6">
                 <h2 className="text-2xl font-bold text-foreground uppercase border-b-2 border-primary pb-2">Settings</h2>
                 
                 <FormField control={form.control} name="targetFormat" render={({ field }) => (
@@ -442,8 +453,10 @@ export function ImageConverter() {
                 <Button type="submit" className="w-full font-bold uppercase border-2 border-foreground bg-primary text-background hover:bg-primary/90" disabled={files.length === 0 || isConverting}>
                   {isConverting ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Converting... ({Math.round(overallProgress)}%)</>
+                  ) : allDone ? (
+                    <>Convert More</>
                   ) : (
-                    <>Convert {files.length > 0 ? files.length : ''} {files.length === 1 ? 'Image' : 'Images'}</>
+                    <>Convert {filesToConvertCount > 0 ? filesToConvertCount : ''} {filesToConvertCount === 1 ? 'Image' : 'Images'}</>
                   )}
                 </Button>
                 {allDone && (
@@ -459,5 +472,7 @@ export function ImageConverter() {
     </Card>
   );
 }
+
+    
 
     
