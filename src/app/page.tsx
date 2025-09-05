@@ -5,7 +5,7 @@ import { ImageConverter } from '@/components/image-converter';
 import { AboutDialog } from '@/components/about-dialog';
 import { ExifViewerDialog } from '@/components/exif-viewer-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
 import * as React from 'react';
@@ -31,6 +31,9 @@ export default function Home() {
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-3/4">
+                  <SheetHeader>
+                    <SheetTitle className="font-bold uppercase text-2xl text-primary">Menu</SheetTitle>
+                  </SheetHeader>
                   <div className="flex flex-col space-y-4 pt-8">
                     {React.cloneElement(exifDialog, { onSelect: () => setOpen(false) })}
                     {React.cloneElement(aboutDialog, { onSelect: () => setOpen(false) })}
