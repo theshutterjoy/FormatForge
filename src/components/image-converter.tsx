@@ -197,9 +197,18 @@ export function ImageConverter() {
     }
   };
   
-  const convertFile = async (fileState: FileState, retries = 3) => {
+  const convertFile = async (
+    fileState: FileState, 
+    onProgress: (progress: number) => void,
+    retries = 3
+  ) => {
     try {
-      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: 10} : f));
+      const updateProgress = (p: number) => {
+        setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: p } : f));
+        onProgress(p);
+      };
+      
+      updateProgress(10);
 
       const input: OptimizeCompressionSettingsInput = {
         ...fileState.settings,
@@ -218,7 +227,7 @@ export function ImageConverter() {
       }
       
       const aiResult = await response.json();
-      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, progress: 30} : f));
+      updateProgress(30);
       
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
@@ -226,10 +235,9 @@ export function ImageConverter() {
       // Perform the actual conversion
       const dataUrl = await fileToDataUrl(fileState.file);
       const image = await createImage(dataUrl);
-      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, progress: 60} : f));
+      updateProgress(60);
 
       const convertedImageUrl = await performConversion(image, fileState.settings, aiResult);
-
 
       const result: ConversionResult = {
         imageUrl: convertedImageUrl,
@@ -239,11 +247,13 @@ export function ImageConverter() {
       };
 
       setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'done', progress: 100, result } : f));
+      onProgress(100);
+
     } catch (error: any) {
         if (retries > 0 && error.message.includes('503 Service Unavailable')) {
           console.warn(`Retrying conversion for ${fileState.file.name}... (${retries} retries left)`);
           await new Promise(res => setTimeout(res, (4 - retries) * 1000));
-          await convertFile(fileState, retries - 1);
+          await convertFile(fileState, onProgress, retries - 1);
         } else {
           console.error("Conversion failed for", fileState.file.name, error);
           setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'error', progress: 0} : f));
@@ -261,9 +271,15 @@ export function ImageConverter() {
     setOverallProgress(0);
 
     const filesToConvert = files.filter(f => f.status === 'pending');
-    for (let i = 0; i < filesToConvert.length; i++) {
-        await convertFile(filesToConvert[i]);
-        setOverallProgress(((i + 1) / filesToConvert.length) * 100);
+    const totalFiles = filesToConvert.length;
+    
+    for (let i = 0; i < totalFiles; i++) {
+        const baseProgress = (i / totalFiles) * 100;
+        const onProgress = (currentFileProgress: number) => {
+            const overall = baseProgress + (currentFileProgress / totalFiles);
+            setOverallProgress(overall);
+        };
+        await convertFile(filesToConvert[i], onProgress);
     }
 
     setIsConverting(false);
@@ -305,18 +321,17 @@ export function ImageConverter() {
         });
   };
 
-
-  const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
-
-  const filesToConvertCount = files.filter(f => f.status === 'pending').length;
-
   const handlePrimaryButtonClick = () => {
     if (allDone) {
+      handleReset();
       fileInputRef.current?.click();
     } else {
       onSubmit();
     }
   };
+
+  const allDone = files.length > 0 && files.every(f => f.status === 'done' || f.status === 'error');
+  const filesToConvertCount = files.filter(f => f.status === 'pending').length;
 
   return (
     <Card className="w-full shadow-none border-0 rounded-none bg-transparent">
@@ -475,9 +490,5 @@ export function ImageConverter() {
     </Card>
   );
 }
-
-    
-
-    
 
     
