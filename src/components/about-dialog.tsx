@@ -1,6 +1,6 @@
 "use client";
 
-import { Instagram, Twitter } from 'lucide-react';
+import { Instagram } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -71,6 +71,19 @@ export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
                 <path d="m6 6 12 12" />
               </svg>
               <span className="sr-only">Twitter / X</span>
+            </a>
+            <a href="https://www.behance.net/theshutterjoy" target="_blank" rel="noopener noreferrer" className="text-foreground hover:text-primary transition-colors">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-6 w-6"
+              >
+                <path d="M7.938 10.359h5.125c1.125 0 1.688.563 1.688 1.594 0 1.031-.563 1.594-1.688 1.594h-5.125v-3.188zm10.375-1.5c-.281-.094-.656-.188-1.031-.188-2.156 0-3.656 1.406-3.656 4.219 0 2.813 1.5 4.125 3.563 4.125 1.219 0 2.156-.469 2.719-1.219h.094v.938h2.313v-7.188c0-1.031-.75-1.406-1.875-1.406-.656 0-1.219.188-1.563.313l-.563 1.813zm-8.219 8.219h5.813c1.688 0 2.906-1.031 2.906-2.813 0-1.781-1.219-2.813-2.906-2.813h-5.813v5.626zM15.75 3h-7.5c-1.219 0-2.25.938-2.25 2.25v13.5c0 1.313 1.031 2.25 2.25 2.25h7.5c1.313 0 2.25-1.031 2.25-2.25v-13.5c0-1.313-.938-2.25-2.25-2.25zm.75 7.125h-2.25v-1.875h2.25v1.875z"/>
+              </svg>
+              <span className="sr-only">Behance</span>
             </a>
           </div>
         </div>
