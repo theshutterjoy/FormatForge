@@ -92,13 +92,13 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
         <DialogHeader>
           <DialogTitle className="font-bold uppercase text-2xl text-primary">EXIF/Metadata Viewer</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <p className="text-sm text-foreground">
+        <div className="space-y-4 overflow-hidden">
+          <p className="text-sm text-foreground break-words">
             Upload an image to view its EXIF (Exchangeable Image File Format) metadata. This includes details like camera settings, date, and location information embedded in the file.
           </p>
           
           <Input type="file" accept="image/jpeg, image/tiff, image/png, image/webp" onChange={handleFileChange} className="hidden" ref={fileInputRef} />
-          <Button onClick={handleButtonClick} variant="outline" className="w-full overflow-hidden">
+          <Button onClick={handleButtonClick} variant="outline" className="w-full flex-shrink-0 overflow-hidden">
             {fileName ? (
               <span className="truncate">Loaded: {fileName}</span>
             ) : (
@@ -107,7 +107,7 @@ export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
           </Button>
 
           {error && (
-            <div className="text-destructive border-2 border-destructive p-3 font-bold">
+            <div className="text-destructive border-2 border-destructive p-3 font-bold break-words">
               {error}
             </div>
           )}
