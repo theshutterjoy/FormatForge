@@ -13,6 +13,12 @@ import * as React from 'react';
 export default function Home() {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
 
   const handleSelectInSheet = () => {
     // This function will be called when a dialog is opened from the sheet.
@@ -28,7 +34,7 @@ export default function Home() {
       <div className="w-full max-w-6xl mx-auto border-2 border-foreground p-1">
         <header className="relative text-left mb-8 p-4 border-b-2 border-foreground">
           <div className="absolute top-4 right-4 flex items-center">
-            {isMobile ? (
+            {isClient && isMobile ? (
               <Sheet open={open} onOpenChange={setOpen}>
                 <SheetTrigger asChild>
                   <Button variant="outline" size="icon">
