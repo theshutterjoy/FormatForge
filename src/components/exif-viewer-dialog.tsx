@@ -21,11 +21,18 @@ interface Metadata {
   };
 }
 
-export function ExifViewerDialog() {
+type ExifViewerDialogProps = {
+  onSelect?: () => void;
+};
+
+export function ExifViewerDialog({ onSelect }: ExifViewerDialogProps) {
   const [metadata, setMetadata] = React.useState<Metadata | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [open, setOpen] = React.useState(false);
+  const isSheetButton = !!onSelect;
+
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -54,14 +61,32 @@ export function ExifViewerDialog() {
     fileInputRef.current?.click();
   }
 
-  return (
-    <Dialog onOpenChange={() => {
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
         setMetadata(null);
         setError(null);
         setFileName(null);
-    }}>
+    }
+    setOpen(isOpen);
+  }
+
+  const handleTriggerClick = () => {
+    if (isSheetButton) {
+        onSelect?.();
+    }
+    setOpen(true);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="font-bold uppercase">Metadata</Button>
+        <Button 
+          variant="outline" 
+          className="font-bold uppercase w-full"
+          onClick={handleTriggerClick}
+        >
+          Metadata
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
         <DialogHeader>

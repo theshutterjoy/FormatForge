@@ -9,12 +9,33 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import * as React from 'react';
 
-export function AboutDialog() {
+type AboutDialogProps = {
+  onSelect?: () => void;
+};
+
+export function AboutDialog({ onSelect }: AboutDialogProps) {
+  const [open, setOpen] = React.useState(false);
+  const isSheetButton = !!onSelect;
+
+  const handleTriggerClick = () => {
+    if (isSheetButton) {
+        onSelect?.();
+    }
+    setOpen(true);
+  }
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" className="font-bold uppercase">About</Button>
+        <Button 
+          variant="outline" 
+          className="font-bold uppercase w-full"
+          onClick={handleTriggerClick}
+        >
+          About
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md border-2 border-foreground shadow-[8px_8px_0px_0px_hsl(var(--foreground))]">
         <DialogHeader>
