@@ -12,16 +12,16 @@ import {
 import * as React from 'react';
 
 type AboutDialogProps = {
-  onSelect?: () => void;
+  onOpenInSheet?: () => void;
 };
 
-export function AboutDialog({ onSelect }: AboutDialogProps) {
+export function AboutDialog({ onOpenInSheet }: AboutDialogProps) {
   const [open, setOpen] = React.useState(false);
-  const isSheetButton = !!onSelect;
+  const isSheetButton = !!onOpenInSheet;
 
   const handleTriggerClick = () => {
     if (isSheetButton) {
-        onSelect?.();
+        onOpenInSheet?.();
     }
     setOpen(true);
   }

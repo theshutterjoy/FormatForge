@@ -22,16 +22,16 @@ interface Metadata {
 }
 
 type ExifViewerDialogProps = {
-  onSelect?: () => void;
+  onOpenInSheet?: () => void;
 };
 
-export function ExifViewerDialog({ onSelect }: ExifViewerDialogProps) {
+export function ExifViewerDialog({ onOpenInSheet }: ExifViewerDialogProps) {
   const [metadata, setMetadata] = React.useState<Metadata | null>(null);
   const [fileName, setFileName] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [open, setOpen] = React.useState(false);
-  const isSheetButton = !!onSelect;
+  const isSheetButton = !!onOpenInSheet;
 
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +72,7 @@ export function ExifViewerDialog({ onSelect }: ExifViewerDialogProps) {
 
   const handleTriggerClick = () => {
     if (isSheetButton) {
-        onSelect?.();
+        onOpenInSheet?.();
     }
     setOpen(true);
   }

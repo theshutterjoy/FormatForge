@@ -14,8 +14,14 @@ export default function Home() {
   const isMobile = useIsMobile();
   const [open, setOpen] = React.useState(false);
 
-  const aboutDialog = <AboutDialog />;
-  const exifDialog = <ExifViewerDialog />;
+  const handleSelectInSheet = () => {
+    // This function will be called when a dialog is opened from the sheet.
+    // We want the sheet to stay open, so we don't do anything here.
+    // The dialog's own state will manage its opening and closing.
+  };
+
+  const aboutDialog = <AboutDialog onOpenInSheet={handleSelectInSheet} />;
+  const exifDialog = <ExifViewerDialog onOpenInSheet={handleSelectInSheet} />;
 
   return (
     <main className="flex min-h-screen w-full flex-col items-center justify-center p-4 sm:p-8 md:p-12">
@@ -35,8 +41,8 @@ export default function Home() {
                     <SheetTitle className="font-bold uppercase text-2xl text-primary">Menu</SheetTitle>
                   </SheetHeader>
                   <div className="flex flex-col space-y-4 pt-8">
-                    {React.cloneElement(exifDialog, { onSelect: () => setOpen(false) })}
-                    {React.cloneElement(aboutDialog, { onSelect: () => setOpen(false) })}
+                    {exifDialog}
+                    {aboutDialog}
                   </div>
                 </SheetContent>
               </Sheet>
