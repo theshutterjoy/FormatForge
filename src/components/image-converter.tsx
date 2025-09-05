@@ -199,7 +199,7 @@ export function ImageConverter() {
   
   const convertFile = async (fileState: FileState, retries = 3) => {
     try {
-      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: 0} : f));
+      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, status: 'converting', progress: 10} : f));
 
       const input: OptimizeCompressionSettingsInput = {
         ...fileState.settings,
@@ -218,6 +218,7 @@ export function ImageConverter() {
       }
       
       const aiResult = await response.json();
+      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, progress: 30} : f));
       
       const originalFileName = fileState.file.name.split('.').slice(0, -1).join('.');
       const newFileName = `${originalFileName}.${fileState.settings.targetFormat.toLowerCase()}`;
@@ -225,6 +226,8 @@ export function ImageConverter() {
       // Perform the actual conversion
       const dataUrl = await fileToDataUrl(fileState.file);
       const image = await createImage(dataUrl);
+      setFiles(prev => prev.map(f => f.id === fileState.id ? {...f, progress: 60} : f));
+
       const convertedImageUrl = await performConversion(image, fileState.settings, aiResult);
 
 
@@ -472,6 +475,8 @@ export function ImageConverter() {
     </Card>
   );
 }
+
+    
 
     
 
